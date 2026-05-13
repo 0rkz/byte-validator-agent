@@ -1,6 +1,6 @@
 {
   "name": "byte-validator-agent",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Autonomous AI-agent validator for Byte Protocol. Watches DataStream broadcasts on Arbitrum, scores publishers via LLM-augmented anomaly detection, submits PQS to chain. Mirror of a human indexer with independent (non-mirror) score computation.",
   "type": "module",
   "license": "MIT",
@@ -31,7 +31,10 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "tsc --watch"
+    "dev": "tsc --watch",
+    "genkey": "node dist/scripts/genkey.js",
+    "register-indexer": "node dist/scripts/register-indexer.js",
+    "prestart": "test -f dist/index.js || npm run build"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

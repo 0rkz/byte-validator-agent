@@ -92,7 +92,7 @@ export const VALIDATOR_REGISTRY_ABI = [
   },
 ] as const;
 
-// PQSVerifier — score submission + batch finalization
+// PQSVerifier — score submission + batch finalization + indexer admin
 export const PQS_VERIFIER_ABI = [
   {
     type: "function",
@@ -116,6 +116,13 @@ export const PQS_VERIFIER_ABI = [
   },
   {
     type: "function",
+    name: "registerIndexer",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "indexer", type: "address" }],
+    outputs: [],
+  },
+  {
+    type: "function",
     name: "getVerifiedPQS",
     stateMutability: "view",
     inputs: [{ name: "publisher", type: "address" }],
@@ -132,7 +139,48 @@ export const PQS_VERIFIER_ABI = [
   },
   {
     type: "function",
+    name: "indexers",
+    stateMutability: "view",
+    inputs: [{ name: "", type: "address" }],
+    outputs: [
+      { name: "registered", type: "bool" },
+      { name: "suspended", type: "bool" },
+      { name: "warningCount", type: "uint256" },
+      { name: "lastSubmission", type: "uint256" },
+      { name: "lastWarningReset", type: "uint256" },
+    ],
+  },
+  {
+    type: "function",
     name: "getIndexerCount",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "getActiveIndexerCount",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "admin",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "address" }],
+  },
+  {
+    type: "function",
+    name: "MAX_INDEXERS",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "BATCH_INTERVAL",
     stateMutability: "view",
     inputs: [],
     outputs: [{ type: "uint256" }],
@@ -150,13 +198,23 @@ export const REPUTATION_ENGINE_ABI = [
   },
 ] as const;
 
-// PPBToken (standard ERC-20 read surface)
+// PPBToken (standard ERC-20 read + approve surface)
 export const ERC20_ABI = [
   {
     type: "function",
     name: "balanceOf",
     stateMutability: "view",
     inputs: [{ name: "account", type: "address" }],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "allowance",
+    stateMutability: "view",
+    inputs: [
+      { name: "owner", type: "address" },
+      { name: "spender", type: "address" },
+    ],
     outputs: [{ type: "uint256" }],
   },
   {
@@ -168,5 +226,12 @@ export const ERC20_ABI = [
       { name: "amount", type: "uint256" },
     ],
     outputs: [{ type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "decimals",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint8" }],
   },
 ] as const;

@@ -12,6 +12,13 @@ export interface Config {
   anthropicApiKey: string | null;
   ollamaUrl: string;
   scoringIntervalMs: number;
+  // v0.3 on-chain
+  stakeAmountWei: bigint; // PPB tokens to stake at register()
+  heartbeatIntervalMs: number;
+  submitIntervalMs: number;
+  autoRegister: boolean;
+  heartbeatEnabled: boolean;
+  submitEnabled: boolean;
   logLevel: "debug" | "info" | "warn" | "error";
 }
 
@@ -51,9 +58,17 @@ export function loadConfig(): Config {
     llmStrategy: (getEnv("LLM_STRATEGY", "hybrid") as Config["llmStrategy"]),
     anthropicApiKey: getOptional("ANTHROPIC_API_KEY"),
     ollamaUrl: getEnv("OLLAMA_URL", "http://localhost:11434"),
-    // 60s for dev/testing — easy to verify scoring loop fires. Production v0.3 will
-    // align this to the 24h PQSVerifier batch interval.
+    // 60s for dev/testing — easy to verify scoring loop fires. The on-chain submit
+    // loop runs on its own SUBMIT_INTERVAL_MS (default 24h, matching BATCH_INTERVAL).
     scoringIntervalMs: parseInt(getEnv("SCORING_INTERVAL_MS", "60000"), 10),
+    // v0.3 on-chain config
+    stakeAmountWei: BigInt(getEnv("STAKE_AMOUNT_WEI", "200000000000000000000")), // 200 PPB (18 decimals)
+    // ValidatorRegistry.HEARTBEAT_INTERVAL = 1h; we beat slightly under that.
+    heartbeatIntervalMs: parseInt(getEnv("HEARTBEAT_INTERVAL_MS", "3300000"), 10), // 55 min
+    submitIntervalMs: parseInt(getEnv("SUBMIT_INTERVAL_MS", "86400000"), 10), // 24h
+    autoRegister: getEnv("AUTO_REGISTER", "false") === "true",
+    heartbeatEnabled: getEnv("HEARTBEAT_ENABLED", "false") === "true",
+    submitEnabled: getEnv("SUBMIT_ENABLED", "false") === "true",
     logLevel: (getEnv("LOG_LEVEL", "info") as Config["logLevel"]),
   };
 }
