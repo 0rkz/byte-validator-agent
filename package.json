@@ -1,0 +1,48 @@
+{
+  "name": "byte-validator-agent",
+  "version": "0.1.0",
+  "description": "Autonomous AI-agent validator for Byte Protocol. Watches DataStream broadcasts on Arbitrum, scores publishers via LLM-augmented anomaly detection, submits PQS to chain. Mirror of a human indexer with independent (non-mirror) score computation.",
+  "type": "module",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "bin": {
+    "byte-validator-agent": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "homepage": "https://www.payperbyte.io",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/0rkz/byte-validator-agent.git"
+  },
+  "keywords": [
+    "byte-protocol",
+    "validator",
+    "ai-agent",
+    "arbitrum",
+    "pqs",
+    "proof-of-quality",
+    "agent-commerce",
+    "mcp"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "kleur": "^4.1.5",
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
