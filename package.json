@@ -1,6 +1,6 @@
 {
   "name": "byte-validator-agent",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Autonomous AI-agent validator for Byte Protocol. Watches DataStream broadcasts on Arbitrum, scores publishers via LLM-augmented anomaly detection, submits PQS to chain. Mirror of a human indexer with independent (non-mirror) score computation.",
   "type": "module",
   "license": "MIT",

@@ -11,6 +11,7 @@ export interface Config {
   llmStrategy: "claude" | "ollama" | "hybrid";
   anthropicApiKey: string | null;
   ollamaUrl: string;
+  scoringIntervalMs: number;
   logLevel: "debug" | "info" | "warn" | "error";
 }
 
@@ -50,6 +51,9 @@ export function loadConfig(): Config {
     llmStrategy: (getEnv("LLM_STRATEGY", "hybrid") as Config["llmStrategy"]),
     anthropicApiKey: getOptional("ANTHROPIC_API_KEY"),
     ollamaUrl: getEnv("OLLAMA_URL", "http://localhost:11434"),
+    // 60s for dev/testing — easy to verify scoring loop fires. Production v0.3 will
+    // align this to the 24h PQSVerifier batch interval.
+    scoringIntervalMs: parseInt(getEnv("SCORING_INTERVAL_MS", "60000"), 10),
     logLevel: (getEnv("LOG_LEVEL", "info") as Config["logLevel"]),
   };
 }

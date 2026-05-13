@@ -20,6 +20,7 @@ export interface PublisherSnapshot {
   payloadLengths: number[]; // recent window, capped
   subscriberCounts: number[]; // recent window, capped
   intervals: number[]; // gaps between consecutive broadcasts, capped
+  recentHashes: `0x${string}`[]; // recent payload hashes (for archive lookup at scoring time)
   totalFees: bigint;
 }
 
@@ -40,6 +41,7 @@ export class PublisherState {
         payloadLengths: [ev.payloadLength],
         subscriberCounts: [ev.subscriberCount],
         intervals: [],
+        recentHashes: [ev.payloadHash],
         totalFees: ev.totalSubscriberFees,
       };
       this.byPublisher.set(key, snap);
@@ -54,6 +56,7 @@ export class PublisherState {
       payloadLengths: pushCapped(prev.payloadLengths, ev.payloadLength),
       subscriberCounts: pushCapped(prev.subscriberCounts, ev.subscriberCount),
       intervals: pushCapped(prev.intervals, interval),
+      recentHashes: pushCapped(prev.recentHashes, ev.payloadHash),
       totalFees: prev.totalFees + ev.totalSubscriberFees,
     };
     this.byPublisher.set(key, snap);
