@@ -4,12 +4,13 @@
 // client is mid-getLogs.
 
 import { createPublicClient, createWalletClient, http, type Address } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
+import { privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
 import { arbitrumSepolia } from "viem/chains";
 import type { Config } from "./config.js";
 
 export interface Signer {
   address: Address;
+  account: PrivateKeyAccount; // pass to simulateContract so the request carries the full signer
   publicClient: ReturnType<typeof createPublicClient>;
   walletClient: ReturnType<typeof createWalletClient>;
 }
@@ -30,5 +31,5 @@ export function buildSigner(cfg: Config): Signer {
     account,
     transport: http(cfg.rpcUrlFallback),
   });
-  return { address: account.address, publicClient, walletClient };
+  return { address: account.address, account, publicClient, walletClient };
 }

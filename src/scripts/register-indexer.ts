@@ -71,7 +71,7 @@ async function main(): Promise<void> {
     abi: PQS_VERIFIER_ABI,
     functionName: "registerIndexer",
     args: [target as Address],
-    account: account.address,
+    account,
   });
   const hash = (await walletClient.writeContract(request)) as Hash;
   console.log(`tx submitted: ${hash}`);

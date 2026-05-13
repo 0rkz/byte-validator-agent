@@ -34,6 +34,7 @@
     "dev": "tsc --watch",
     "genkey": "node dist/scripts/genkey.js",
     "register-indexer": "node dist/scripts/register-indexer.js",
+    "bootstrap-from-deployer": "node dist/scripts/bootstrap-from-deployer.js",
     "prestart": "test -f dist/index.js || npm run build"
   },
   "dependencies": {

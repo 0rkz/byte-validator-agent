@@ -28,6 +28,7 @@ export interface RegistrationStatus {
 }
 
 export class OnchainClient {
+  private lastUsedNonce: number | null = null;
   constructor(private cfg: Config, private signer: Signer) {}
 
   // ─── state reads ──────────────────────────────────────────────────────────
@@ -174,16 +175,30 @@ export class OnchainClient {
       console.log(kleur.yellow(`      ${kleur.dim("[dry-run]")} ${req.label}`));
       return null;
     }
+    // Locally-tracked pending nonce. publicnode is sharded; reads can return
+    // stale counts seconds after a confirmation lands. Trust max(rpc_pending,
+    // lastUsed+1) so back-to-back submits never collide.
+    const rpcNonce = await this.signer.publicClient.getTransactionCount({
+      address: this.signer.address,
+      blockTag: "pending",
+    });
+    const nonce =
+      this.lastUsedNonce === null
+        ? rpcNonce
+        : Math.max(rpcNonce, this.lastUsedNonce + 1);
+
     try {
       const { request } = await this.signer.publicClient.simulateContract({
         address: req.address,
         abi: req.abi,
         functionName: req.functionName,
         args: req.args,
-        account: this.signer.address,
+        account: this.signer.account,
+        nonce,
       });
       const hash = (await this.signer.walletClient.writeContract(request)) as Hash;
       console.log(kleur.cyan(`      ${req.label} → tx ${hash.slice(0, 18)}…`));
+      this.lastUsedNonce = nonce;
       const receipt = await this.signer.publicClient.waitForTransactionReceipt({ hash });
       if (receipt.status !== "success") {
         throw new Error(`tx reverted: ${hash}`);
@@ -194,6 +209,8 @@ export class OnchainClient {
       return receipt;
     } catch (err) {
       console.error(kleur.red(`      ✗ ${req.label} failed: ${(err as Error).message.slice(0, 200)}`));
+      // Reset local nonce on error so the next attempt re-reads from chain.
+      this.lastUsedNonce = null;
       throw err;
     }
   }
