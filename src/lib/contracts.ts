@@ -1,6 +1,7 @@
 // Contract addresses on Arbitrum Sepolia (chain id 421614).
-// Mirrors /home/orkz/byte/contracts/deployments/arbitrum-sepolia.json — duplicated
-// here for distribution autonomy (see DECISION_LOG entry on shared-contracts deferral).
+// Mirrors the canonical deployments JSON in the byte-protocol-contracts repo
+// — duplicated here for distribution autonomy so this agent runs without a
+// dep on the contracts repo at runtime.
 export const ARBITRUM_SEPOLIA_ID = 421614;
 
 export const ADDRESSES = {
@@ -16,7 +17,8 @@ export const ADDRESSES = {
 
 // ─── ABI fragments ──────────────────────────────────────────────────────────
 // Minimal — only the events + functions the agent-val needs across its lifetime.
-// Full ABIs live at /home/orkz/byte/contracts/out/<Name>.sol/<Name>.json (Foundry build).
+// Full ABIs come from the byte-protocol-contracts Foundry build output
+// (out/<Name>.sol/<Name>.json).
 
 // DataStream — broadcast event surface
 export const DATA_STREAM_ABI = [

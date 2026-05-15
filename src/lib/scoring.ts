@@ -28,6 +28,10 @@ export const PUBLISHER_REGISTRY: Record<string, { name: string; lowPqs: boolean 
   "0xa4ab2d0211e8daa17fc746dfa35bff64559a5884": { name: "crypto-top100", lowPqs: false },
   "0x3f65b5d54772f0fffc180b9c143faa939c6e529e": { name: "defi-yields", lowPqs: false },
   "0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc": { name: "test-agent", lowPqs: true },
+  // Multi-agent Mercat seed (2026-05-15) — LLM-powered publishers
+  "0x821cefaff67247a91ea3975cb0f53ba79d3d35a5": { name: "fact-oracle", lowPqs: false },
+  "0x551a4ed7f4a8cf5170a5efc5a5d1266386962e73": { name: "news-feed", lowPqs: false },
+  "0x15bfc9492940ff2620118f4611eaed949a8415db": { name: "code-pulse", lowPqs: false },
 };
 
 export interface ScoreBreakdown {

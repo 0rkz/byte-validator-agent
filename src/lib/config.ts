@@ -53,7 +53,7 @@ export function loadConfig(): Config {
     // active publisher at least once at their natural cadence. publicnode handles
     // single-call getLogs over this range fine.
     lookbackBlocks: BigInt(getEnv("LOOKBACK_BLOCKS", "50000")),
-    payloadArchiveDir: getEnv("PAYLOAD_ARCHIVE_DIR", "/home/orkz/byte/data-feeds/archive"),
+    payloadArchiveDir: getEnv("PAYLOAD_ARCHIVE_DIR", "../data-feeds/archive"),
     endpointUrl: getEnv("ENDPOINT_URL", "https://payperbyte.io/validator/agent-v01"),
     llmStrategy: (getEnv("LLM_STRATEGY", "hybrid") as Config["llmStrategy"]),
     anthropicApiKey: getOptional("ANTHROPIC_API_KEY"),
