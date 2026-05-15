@@ -1,6 +1,13 @@
-// LLM client for anomaly detection. Strategy switching: Claude (high quality, costs $),
-// Ollama (free, local, lower quality), or hybrid (Claude for production publishers,
-// Ollama for known-low-PQS publishers like test-agent — per DECISION_LOG 2026-05-13).
+// LLM client for anomaly detection. Strategy switching:
+//   - "claude"  : always Claude (falls through to Ollama if key missing)
+//   - "ollama"  : always Ollama
+//   - "hybrid"  : Ollama first, Claude as fallback only when Ollama fails
+//
+// 2026-05-15 — flipped hybrid semantics per Mark's local-first directive.
+// Previously hybrid was "Claude for production publishers, Ollama for known-bad."
+// New: hybrid is "Ollama for everyone, Claude only as failover." Both keeps
+// Anthropic spend off the hot path AND routes work to Zazu so the local
+// training-capture pipeline gets the data.
 
 import type { Config } from "./config.js";
 
@@ -42,40 +49,58 @@ export class LLMClient {
   constructor(private cfg: Config) {}
 
   async analyzeAnomaly(input: AnomalyInput): Promise<LLMResult> {
-    const provider = this.choose(input);
-    const t0 = Date.now();
     const prompt = ANOMALY_PROMPT_PREFIX + JSON.stringify(input.payloads, null, 2);
+    const order = this.providerOrder();
 
-    try {
-      const raw = provider === "claude"
-        ? await this.callClaude(prompt)
-        : await this.callOllama(prompt);
-      const parsed = parseScoreJson(raw);
-      return {
-        score: clamp(parsed.score, 0, 10000),
-        reasoning: parsed.reasoning,
-        provider,
-        latencyMs: Date.now() - t0,
-      };
-    } catch (err) {
-      // On LLM failure, return a "neutral" mid-score so we don't dominate the composite.
-      // Real failure investigation happens via logs.
-      return {
-        score: 5000,
-        reasoning: `LLM error (${provider}): ${(err as Error).message.slice(0, 100)}`,
-        provider,
-        latencyMs: Date.now() - t0,
-      };
+    let lastErr: Error | null = null;
+    let lastTried: "claude" | "ollama" = order[0];
+
+    for (const provider of order) {
+      const t0 = Date.now();
+      lastTried = provider;
+      try {
+        const raw = provider === "claude"
+          ? await this.callClaude(prompt)
+          : await this.callOllama(prompt);
+        const parsed = parseScoreJson(raw);
+        return {
+          score: clamp(parsed.score, 0, 10000),
+          reasoning: parsed.reasoning,
+          provider,
+          latencyMs: Date.now() - t0,
+        };
+      } catch (err) {
+        lastErr = err as Error;
+        // Try next provider in chain. Logged at info level so we know when
+        // Ollama is silently degrading and Claude is picking up.
+        console.warn(
+          `[llm] ${provider} failed (${lastErr.message.slice(0, 100)}); trying next provider`
+        );
+      }
     }
+
+    // Everything failed — return neutral mid-score so we don't dominate the composite.
+    return {
+      score: 5000,
+      reasoning: `All LLM providers failed: ${lastErr?.message.slice(0, 100) ?? "unknown"}`,
+      provider: lastTried,
+      latencyMs: 0,
+    };
   }
 
-  private choose(input: AnomalyInput): "claude" | "ollama" {
+  /**
+   * Provider order to try, in sequence. First success wins; later ones run
+   * only on failure of all earlier ones.
+   *
+   * "hybrid" is the canonical setting per the 2026-05-15 local-first
+   * directive: Ollama first, Claude only as failover when local errors.
+   */
+  private providerOrder(): ("claude" | "ollama")[] {
     const s = this.cfg.llmStrategy;
-    if (s === "claude") return this.cfg.anthropicApiKey ? "claude" : "ollama";
-    if (s === "ollama") return "ollama";
-    // hybrid: Ollama for known-low-PQS, Claude for everyone else (if key available)
-    if (input.isLowPqsKnown) return "ollama";
-    return this.cfg.anthropicApiKey ? "claude" : "ollama";
+    if (s === "claude") return this.cfg.anthropicApiKey ? ["claude"] : ["ollama"];
+    if (s === "ollama") return ["ollama"];
+    // hybrid: Ollama first, Claude fallback (only if key configured).
+    return this.cfg.anthropicApiKey ? ["ollama", "claude"] : ["ollama"];
   }
 
   private async callClaude(prompt: string): Promise<string> {
@@ -106,7 +131,7 @@ export class LLMClient {
   }
 
   private async callOllama(prompt: string): Promise<string> {
-    const model = process.env.OLLAMA_MODEL ?? "qwen3-coder:30b";
+    const model = process.env.OLLAMA_MODEL ?? "deepseek-r1:14b";
     const res = await fetch(`${this.cfg.ollamaUrl}/api/generate`, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -114,9 +139,11 @@ export class LLMClient {
         model,
         prompt,
         stream: false,
-        options: { temperature: 0.1, num_predict: 200 },
+        // 1024 gives reasoning models (deepseek-r1) room for <think> tokens
+        // before the final JSON answer. Plain models stop short of this cap.
+        options: { temperature: 0.1, num_predict: 1024 },
       }),
-      signal: AbortSignal.timeout(60_000), // Ollama can be slow on first call
+      signal: AbortSignal.timeout(120_000), // accommodate first-call model load
     });
     if (!res.ok) {
       const body = await res.text();
@@ -126,7 +153,8 @@ export class LLMClient {
     const data = (await res.json()) as any;
     const text = data?.response;
     if (typeof text !== "string") throw new Error("Ollama returned unexpected shape");
-    return text;
+    // Strip reasoning-model <think>...</think> blocks before downstream JSON parse.
+    return text.replace(/<think>[\s\S]*?<\/think>\s*/gi, "").trim();
   }
 }
 
