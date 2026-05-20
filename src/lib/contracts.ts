@@ -4,15 +4,19 @@
 // dep on the contracts repo at runtime.
 export const ARBITRUM_SEPOLIA_ID = 421614;
 
+// v0.6 bundled redeploy 2026-05-20 (chain 421614). v0.5 is PAUSED.
+// DataStream, DataRegistry, ValidatorRegistry, ReputationEngine, and USDC
+// (now MockUSDC3009) migrated to fresh v0.6 addresses; StreamSubscription →
+// StreamSubscriptionV0_6. PQSVerifier + PPBToken are reused from v0.5.
 export const ADDRESSES = {
-  DataStream: "0x7E12bF2B0d43B9Ea0Bc37A06EcAC36b810351F35",
-  DataRegistry: "0x05D89769A066549115b1B4408bFf899D2737F30b",
-  ValidatorRegistry: "0xEd0Ffa5201994cAC3e17566f445C5D0d0103F016",
+  DataStream: "0x8a20759a89f037B9c2062758f2789A1f858b0b27",
+  DataRegistry: "0x85868CEF6db4531c8c6E378b725BC2813233e014",
+  ValidatorRegistry: "0x7b3f9DA761E2D82FF4faaFfd4e36926049035c4A",
   PQSVerifier: "0xD7c8423296a6E2Dd36466AC0e41884846a27cdE9",
-  ReputationEngine: "0xCef13B96028e4AAEa5889cD99b8740A4f48F5EA0",
+  ReputationEngine: "0xaF7cd2544B742Ea9Df439f0f5DD43Ab02Cbb9b56",
   PPBToken: "0x37a86eD3ee87109ff8cF96B3fe45c70a2ebB69f3",
-  MockUSDC: "0x93BfEbF99AF028ee57B138Fd17a26cAe76a01Fd2",
-  StreamSubscription: "0xcd3521E655ED4070BD95740cf610E955965B575d",
+  MockUSDC: "0x1c16659aeb3aE28467E90348fAAB8874a0D3A4d3",
+  StreamSubscription: "0x713d1020C28C60A8735a77743138A78B77Dbb9b2",
 } as const;
 
 // ─── ABI fragments ──────────────────────────────────────────────────────────
