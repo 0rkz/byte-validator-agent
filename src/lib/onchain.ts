@@ -17,7 +17,9 @@ import {
   ADDRESSES,
   ERC20_ABI,
   PQS_VERIFIER_ABI,
+  REPUTATION_ENGINE_ABI,
   VALIDATOR_REGISTRY_ABI,
+  FLAG_TYPE,
 } from "./contracts.js";
 
 export interface RegistrationStatus {
@@ -158,6 +160,32 @@ export class OnchainClient {
       functionName: "claimRewards",
       args: [] as const,
       enabled: this.cfg.heartbeatEnabled, // gated alongside heartbeat — same risk profile
+    });
+  }
+
+  /**
+   * fileFlag — open a dispute on RE06 against a provably-wrong oracle answer.
+   *
+   * Called by the verification loop only when the oracle's own /verify endpoint
+   * returned `verified == false` with a non-empty `flaggable` set, i.e. a
+   * deterministic fact mismatch the publisher cannot legitimately dispute.
+   * FlagType.FACTUAL is the right class here: the dispute is over a checkable
+   * fact, so once the 24h optimistic window lapses defaultUphold() slashes the
+   * publisher with no human arbitration. Gated by FLAG_ENABLED — dry-run when
+   * false (logs the would-be flag, no tx).
+   */
+  async fileFlag(
+    publisher: Address,
+    messageHash: Hash,
+    flagType: number = FLAG_TYPE.FACTUAL,
+  ): Promise<void> {
+    await this.execute({
+      label: `fileFlag(${publisher.slice(0, 10)}…, ${messageHash.slice(0, 10)}…, flagType=${flagType})`,
+      address: ADDRESSES.ReputationEngine as Address,
+      abi: REPUTATION_ENGINE_ABI,
+      functionName: "fileFlag",
+      args: [publisher, messageHash, flagType] as const,
+      enabled: this.cfg.flagEnabled,
     });
   }
 

@@ -1,5 +1,16 @@
 import "dotenv/config";
 
+/**
+ * A machine-verifiable oracle the validator watches. When a broadcast from
+ * `publisher` is observed, the agent fetches the payload and POSTs it to
+ * `verifyUrl`/verify; a `verified == false` report is grounds to fileFlag.
+ */
+export interface OracleEntry {
+  name: string;
+  publisher: `0x${string}`;
+  verifyUrl: string; // base URL — the agent POSTs to `${verifyUrl}/verify`
+}
+
 export interface Config {
   rpcUrl: string;
   rpcUrlFallback: string;
@@ -19,6 +30,9 @@ export interface Config {
   autoRegister: boolean;
   heartbeatEnabled: boolean;
   submitEnabled: boolean;
+  // v0.4 oracle-answer verification loop
+  flagEnabled: boolean;
+  oracles: OracleEntry[]; // publisher (lowercased) → verify endpoint
   logLevel: "debug" | "info" | "warn" | "error";
 }
 
@@ -41,6 +55,27 @@ function asHexKey(raw: string | null): `0x${string}` | null {
     throw new Error(`VALIDATOR_PRIVATE_KEY must be 32-byte hex (got ${norm.length} chars)`);
   }
   return norm as `0x${string}`;
+}
+
+/**
+ * Oracle registry — publisher address → /verify endpoint base URL.
+ * The two machine-verifiable fact oracles ship as defaults; verify URLs are
+ * env-overridable (PKG_FACTS_VERIFY_URL / CVE_FACTS_VERIFY_URL) so the loop
+ * can point at staging / containerized endpoints without a code change.
+ */
+function loadOracles(): OracleEntry[] {
+  return [
+    {
+      name: "pkg-facts",
+      publisher: "0x14CF5b197acd9fe42B51570D812142B8Eb7cE131",
+      verifyUrl: getEnv("PKG_FACTS_VERIFY_URL", "http://localhost:8082"),
+    },
+    {
+      name: "cve-facts",
+      publisher: "0x2c95b5Af64b305034caea44f13A546D1377B32aC",
+      verifyUrl: getEnv("CVE_FACTS_VERIFY_URL", "http://localhost:8083"),
+    },
+  ];
 }
 
 export function loadConfig(): Config {
@@ -69,6 +104,11 @@ export function loadConfig(): Config {
     autoRegister: getEnv("AUTO_REGISTER", "false") === "true",
     heartbeatEnabled: getEnv("HEARTBEAT_ENABLED", "false") === "true",
     submitEnabled: getEnv("SUBMIT_ENABLED", "false") === "true",
+    // v0.4 oracle-answer verification loop. Default OFF: when false the loop
+    // logs the flag it WOULD file (dry-run) and sends no transaction. Flip to
+    // true only after the auto-flag path has been verified end-to-end.
+    flagEnabled: getEnv("FLAG_ENABLED", "false") === "true",
+    oracles: loadOracles(),
     logLevel: (getEnv("LOG_LEVEL", "info") as Config["logLevel"]),
   };
 }

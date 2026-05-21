@@ -193,7 +193,14 @@ export const PQS_VERIFIER_ABI = [
   },
 ] as const;
 
-// ReputationEngine — read current tier + composite PQS
+// ReputationEngine (v0.6, RE06 — 0xaF7cd2…9b56) — read tier + file flags.
+//
+// fileFlag(publisher, messageHash, flagType): opens a dispute against a
+// broadcast. The agent files FlagType.FACTUAL for a deterministically-proven
+// wrong oracle answer — a provable fact mismatch — which then auto-upholds via
+// defaultUphold() once the 24h optimistic window lapses (no arbitration).
+// flagType enum (ReputationEngineV0_6.FlagType): FACTUAL=0, BLOAT=1,
+// QUALITY=2, FABRICATION=3.
 export const REPUTATION_ENGINE_ABI = [
   {
     type: "function",
@@ -202,7 +209,26 @@ export const REPUTATION_ENGINE_ABI = [
     inputs: [{ name: "publisher", type: "address" }],
     outputs: [{ type: "uint8" }],
   },
+  {
+    type: "function",
+    name: "fileFlag",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "publisher", type: "address" },
+      { name: "messageHash", type: "bytes32" },
+      { name: "flagType", type: "uint8" },
+    ],
+    outputs: [],
+  },
 ] as const;
+
+// ReputationEngineV0_6.FlagType enum — the dispute classification fileFlag takes.
+export const FLAG_TYPE = {
+  FACTUAL: 0,
+  BLOAT: 1,
+  QUALITY: 2,
+  FABRICATION: 3,
+} as const;
 
 // PPBToken (standard ERC-20 read + approve surface)
 export const ERC20_ABI = [

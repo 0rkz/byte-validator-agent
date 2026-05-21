@@ -26,6 +26,7 @@ import { ScoringEngine, PUBLISHER_REGISTRY, type ScoreBreakdown } from "./lib/sc
 import type { ContractInputs } from "./lib/scoring.js";
 import { buildSigner } from "./lib/signer.js";
 import { OnchainClient } from "./lib/onchain.js";
+import { VerificationLoop } from "./lib/verify.js";
 import { formatEther, formatUnits } from "viem";
 
 function banner(rpcUrl: string, llmStrategy: string, mode: string): void {
@@ -108,10 +109,11 @@ async function main(): Promise<void> {
     cfg.autoRegister ? "register" : null,
     cfg.heartbeatEnabled ? "heartbeat" : null,
     cfg.submitEnabled ? "submitScore" : null,
+    cfg.flagEnabled ? "fileFlag" : null,
   ].filter(Boolean);
   const mode = signer
-    ? `v0.3 — listener + scoring + on-chain [${writeFlags.length ? writeFlags.join(", ") : "all writes dry-run"}]`
-    : `v0.3 — listener + scoring (read-only; set VALIDATOR_PRIVATE_KEY for on-chain)`;
+    ? `v0.4 — listener + scoring + oracle-verify + on-chain [${writeFlags.length ? writeFlags.join(", ") : "all writes dry-run"}]`
+    : `v0.4 — listener + scoring + oracle-verify (read-only; set VALIDATOR_PRIVATE_KEY for on-chain)`;
   banner(cfg.rpcUrl, cfg.llmStrategy, mode);
 
   if (signer && onchain) {
@@ -137,8 +139,24 @@ async function main(): Promise<void> {
     console.log();
   }
 
+  // ─── oracle-answer verification loop ───────────────────────────────────
+  // The "auto-flag" half of the verifiable-data trust loop. For every broadcast
+  // from a known machine-verifiable oracle (pkg-facts, cve-facts) the agent
+  // re-runs the oracle's own /verify check; a provably-wrong answer is flagged
+  // on RE06 (auto-uphold → slash). Gated by FLAG_ENABLED — dry-run by default.
+  const archive = new PayloadArchive(cfg);
+  const verifyLoop = new VerificationLoop(cfg, archive, onchain);
+  console.log(
+    kleur.dim(
+      `  Oracle verification: ${cfg.oracles.length} oracle(s) watched ` +
+        `[${cfg.oracles.map((o) => o.name).join(", ")}] — fileFlag ${cfg.flagEnabled ? kleur.yellow("ARMED") : kleur.green("dry-run")}`,
+    ),
+  );
+
   const listener = new BroadcastListener(cfg, async (ev) => {
     console.log(formatBroadcast(ev));
+    // Oracle publishers get an extra re-verification pass on every broadcast.
+    await verifyLoop.onBroadcast(ev);
   });
 
   console.log(kleur.dim(`  Hydrating state from last ${cfg.lookbackBlocks} blocks…`));
@@ -177,7 +195,6 @@ async function main(): Promise<void> {
   // per publisher are cached here so the (much slower) submit loop can pick up
   // whatever the current composite is when its window opens.
   const llm = new LLMClient(cfg);
-  const archive = new PayloadArchive(cfg);
   const engine = new ScoringEngine(llm, archive);
   const latestInputs = new Map<`0x${string}`, ContractInputs>();
 
