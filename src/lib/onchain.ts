@@ -22,6 +22,8 @@ import {
   FLAG_TYPE,
 } from "./contracts.js";
 
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
+
 export interface RegistrationStatus {
   isValidator: boolean;
   stake: bigint;
@@ -36,23 +38,44 @@ export class OnchainClient {
   // ─── state reads ──────────────────────────────────────────────────────────
 
   async readStatus(): Promise<RegistrationStatus> {
+    // v0.6 (VR06): `validators(address)` auto-getter removed; read the full
+    // Validator struct via getValidator(address). viem decodes the struct
+    // return as a named-field object.
     const [validatorRecord, indexerRecord] = await Promise.all([
       this.signer.publicClient.readContract({
         address: ADDRESSES.ValidatorRegistry as Address,
         abi: VALIDATOR_REGISTRY_ABI,
-        functionName: "validators",
+        functionName: "getValidator",
         args: [this.signer.address],
-      }) as Promise<readonly [Address, bigint, bigint, bigint, bigint, bigint, bigint, number]>,
+      }) as Promise<{
+        operator: Address;
+        stake: bigint;
+        registeredAt: bigint;
+        lastHeartbeat: bigint;
+        heartbeatCount: bigint;
+        missedHeartbeats: bigint;
+        slashCount: bigint;
+        tier: number;
+        vpsScore: bigint;
+        uptimeBps: bigint;
+        endpoint: string;
+        active: boolean;
+        lastClaimedEpoch: bigint;
+      }>,
       this.signer.publicClient.readContract({
         address: ADDRESSES.PQSVerifier as Address,
         abi: PQS_VERIFIER_ABI,
         functionName: "indexers",
         args: [this.signer.address],
-      }) as Promise<readonly [boolean, boolean, bigint, bigint, bigint]>,
+      }) as Promise<readonly [boolean, boolean, bigint, bigint, bigint, bigint, bigint]>,
     ]);
     return {
-      isValidator: validatorRecord[2] > 0n, // registeredAt > 0
-      stake: validatorRecord[1],
+      // VR06 leaves operator == address(0) for an unregistered slot; a real
+      // validator always has operator set (register/migrate). registeredAt is
+      // also non-zero for any genuine entry — both checks agree, operator is
+      // the canonical "does an entry exist" signal.
+      isValidator: validatorRecord.operator !== ZERO_ADDRESS,
+      stake: validatorRecord.stake,
       isIndexer: indexerRecord[0],
       indexerSuspended: indexerRecord[1],
     };

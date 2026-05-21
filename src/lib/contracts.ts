@@ -81,20 +81,42 @@ export const VALIDATOR_REGISTRY_ABI = [
     outputs: [{ type: "uint256" }],
   },
   {
+    // v0.6 (VR06) — the v0.5 public `validators` mapping auto-getter was
+    // dropped; VR06 exposes `getValidator(address)` which returns the full
+    // Validator struct as a single tuple. Struct layout matches
+    // ValidatorRegistryV0_6.Validator exactly (13 fields, order-significant).
     type: "function",
-    name: "validators",
+    name: "getValidator",
     stateMutability: "view",
-    inputs: [{ name: "", type: "address" }],
+    inputs: [{ name: "operator", type: "address" }],
     outputs: [
-      { name: "operator", type: "address" },
-      { name: "stake", type: "uint256" },
-      { name: "registeredAt", type: "uint256" },
-      { name: "lastHeartbeat", type: "uint256" },
-      { name: "heartbeatCount", type: "uint256" },
-      { name: "missedHeartbeats", type: "uint256" },
-      { name: "slashCount", type: "uint256" },
-      { name: "tier", type: "uint8" },
+      {
+        type: "tuple",
+        components: [
+          { name: "operator", type: "address" },
+          { name: "stake", type: "uint256" },
+          { name: "registeredAt", type: "uint256" },
+          { name: "lastHeartbeat", type: "uint256" },
+          { name: "heartbeatCount", type: "uint256" },
+          { name: "missedHeartbeats", type: "uint256" },
+          { name: "slashCount", type: "uint256" },
+          { name: "tier", type: "uint8" },
+          { name: "vpsScore", type: "uint256" },
+          { name: "uptimeBps", type: "uint256" },
+          { name: "endpoint", type: "string" },
+          { name: "active", type: "bool" },
+          { name: "lastClaimedEpoch", type: "uint256" },
+        ],
+      },
     ],
+  },
+  {
+    // v0.6 (VR06) — total registered validators (validatorList length).
+    type: "function",
+    name: "getValidatorCount",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
   },
 ] as const;
 
@@ -128,6 +150,8 @@ export const PQS_VERIFIER_ABI = [
     outputs: [],
   },
   {
+    // Mirrors PQSVerifier.PQSScore struct exactly (6 fields, order-significant).
+    // The prior fragment here was stale (composite/submittedAt/batchId).
     type: "function",
     name: "getVerifiedPQS",
     stateMutability: "view",
@@ -136,14 +160,20 @@ export const PQS_VERIFIER_ABI = [
       {
         type: "tuple",
         components: [
+          { name: "disputeScore", type: "uint256" },
+          { name: "retentionScore", type: "uint256" },
+          { name: "freshnessScore", type: "uint256" },
+          { name: "revenueQuality", type: "uint256" },
           { name: "composite", type: "uint256" },
-          { name: "submittedAt", type: "uint256" },
-          { name: "batchId", type: "uint256" },
+          { name: "timestamp", type: "uint256" },
         ],
       },
     ],
   },
   {
+    // Mirrors PQSVerifier.Indexer struct exactly (7 fields, order-significant).
+    // The prior fragment here was stale: it omitted `registeredAt` +
+    // `totalSubmissions` and had warningCount/lastSubmission transposed.
     type: "function",
     name: "indexers",
     stateMutability: "view",
@@ -151,9 +181,11 @@ export const PQS_VERIFIER_ABI = [
     outputs: [
       { name: "registered", type: "bool" },
       { name: "suspended", type: "bool" },
-      { name: "warningCount", type: "uint256" },
+      { name: "registeredAt", type: "uint256" },
       { name: "lastSubmission", type: "uint256" },
+      { name: "warningCount", type: "uint256" },
       { name: "lastWarningReset", type: "uint256" },
+      { name: "totalSubmissions", type: "uint256" },
     ],
   },
   {
@@ -193,7 +225,7 @@ export const PQS_VERIFIER_ABI = [
   },
 ] as const;
 
-// ReputationEngine (v0.6, RE06 — 0xaF7cd2…9b56) — read tier + file flags.
+// ReputationEngine (v0.6, RE06 — 0xaF7cd2…9b56) — file flags.
 //
 // fileFlag(publisher, messageHash, flagType): opens a dispute against a
 // broadcast. The agent files FlagType.FACTUAL for a deterministically-proven
@@ -201,14 +233,12 @@ export const PQS_VERIFIER_ABI = [
 // defaultUphold() once the 24h optimistic window lapses (no arbitration).
 // flagType enum (ReputationEngineV0_6.FlagType): FACTUAL=0, BLOAT=1,
 // QUALITY=2, FABRICATION=3.
+//
+// NOTE: v0.5's public `getTier(address)→uint8` getter has no equivalent on
+// RE06 — tier reads now live on DataRegistry, and RE06 only exposes the
+// write-side `updateTier`. The stale `getTier` fragment was removed; the
+// agent never called it, so this is a no-op for runtime behaviour.
 export const REPUTATION_ENGINE_ABI = [
-  {
-    type: "function",
-    name: "getTier",
-    stateMutability: "view",
-    inputs: [{ name: "publisher", type: "address" }],
-    outputs: [{ type: "uint8" }],
-  },
   {
     type: "function",
     name: "fileFlag",

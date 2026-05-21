@@ -135,7 +135,7 @@ async function main(): Promise<void> {
     abi: PQS_VERIFIER_ABI,
     functionName: "indexers",
     args: [target as Address],
-  })) as readonly [boolean, boolean, bigint, bigint, bigint];
+  })) as readonly [boolean, boolean, bigint, bigint, bigint, bigint, bigint];
   console.log(`step 3: indexer.registered = ${existing[0]}`);
   if (!existing[0]) {
     const { request } = await pc.simulateContract({

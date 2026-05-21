@@ -59,7 +59,7 @@ async function main(): Promise<void> {
     abi: PQS_VERIFIER_ABI,
     functionName: "indexers",
     args: [target as Address],
-  })) as readonly [boolean, boolean, bigint, bigint, bigint];
+  })) as readonly [boolean, boolean, bigint, bigint, bigint, bigint, bigint];
   if (existing[0]) {
     console.log(`already registered (suspended=${existing[1]})`);
     process.exit(0);
